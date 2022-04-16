@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Success</title>
+    <script>
+        var redirectToApp = function () {
+            window.location.replace("{{ .Redirect }}");
+        };
+        window.onload = redirectToApp;
+
+    </script>
+</head>
+<body>
+Login success,redirecting to {{ .Redirect }}
+<a href="{{ .Redirect }}">Click to redirect</a>
+</body>
+</html>

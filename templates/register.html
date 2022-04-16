@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YouAuth - Register</title>
+    <link href="/static/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/login.css" rel="stylesheet">
+    <script src="/static/bootstrap/js/bootstrap.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">YouAuth</a>
+    </div>
+</nav>
+    <div class="loginCenterContainer">
+        <div class="card loginCard" style="width: 18rem;">
+            <div>
+                Sign up
+            </div>
+            <form action="/login/register" method="post">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password">
+                </div>
+                <div class="mb-3">
+                    <label for="repassword" class="form-label">ConfirmPassword</label>
+                    <input type="password" class="form-control" id="repassword" name="repassword">
+                </div>
+                <input type="hidden" name="redirect" value="{{ .Redirect }}">
+                <input type="hidden" name="appid" value="{{ .AppId }}">
+                <button type="submit" class="btn btn-primary">Sign up</button>
+            </form>
+        </div>
+    </div>
+    <script type="application/javascript">
+
+    </script>
+</body>
+</html>

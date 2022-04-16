@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Title</title>
+    <link href="/static/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/login.css" rel="stylesheet">
+    <script src="/static/bootstrap/js/bootstrap.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">YouAuth</a>
+    </div>
+</nav>
+    <div class="loginCenterContainer">
+        <div class="card loginCard" style="width: 18rem;">
+            <div>
+                LoginTo {{ .AppName }}
+            </div>
+            <form action="/login/oauth" method="post">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password">
+                </div>
+                <input type="hidden" name="redirect" value="{{ .Redirect }}">
+                <input type="hidden" name="appid" value="{{ .AppId }}">
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

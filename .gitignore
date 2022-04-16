@@ -1,0 +1,5 @@
+./.idea
+./database.db
+data/
+local_*_test.go
+.idea/
