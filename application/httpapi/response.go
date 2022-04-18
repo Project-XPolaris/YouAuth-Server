@@ -2,9 +2,9 @@ package httpapi
 
 import (
 	"github.com/allentom/haruka"
-	"youauth/commons"
-	"youauth/service"
-	"youauth/youlog"
+	"github.com/projectxpolaris/youauth/commons"
+	"github.com/projectxpolaris/youauth/service"
+	"github.com/projectxpolaris/youauth/youlog"
 )
 
 func AbortError(ctx *haruka.Context, err error, status int) {

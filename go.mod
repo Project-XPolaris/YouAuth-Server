@@ -1,4 +1,4 @@
-module youauth
+module github.com/projectxpolaris/youauth
 
 go 1.17
 

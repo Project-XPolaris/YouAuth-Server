@@ -3,11 +3,11 @@ package main
 import (
 	"github.com/allentom/harukap"
 	"github.com/allentom/harukap/cli"
+	"github.com/projectxpolaris/youauth/application/httpapi"
+	"github.com/projectxpolaris/youauth/config"
+	"github.com/projectxpolaris/youauth/database"
+	"github.com/projectxpolaris/youauth/youlog"
 	"github.com/sirupsen/logrus"
-	"youauth/application/httpapi"
-	"youauth/config"
-	"youauth/database"
-	"youauth/youlog"
 )
 
 func main() {

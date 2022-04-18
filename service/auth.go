@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/projectxpolaris/youauth/config"
+	"github.com/projectxpolaris/youauth/database"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"time"
-	"youauth/config"
-	"youauth/database"
 )
 
 var InvalidateUsernameOrPassword = errors.New("invalid username or password")

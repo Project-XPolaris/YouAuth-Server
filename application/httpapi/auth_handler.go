@@ -3,8 +3,8 @@ package httpapi
 import (
 	"fmt"
 	"github.com/allentom/haruka"
+	"github.com/projectxpolaris/youauth/service"
 	"net/http"
-	"youauth/service"
 )
 
 var loginHandler haruka.RequestHandler = func(context *haruka.Context) {

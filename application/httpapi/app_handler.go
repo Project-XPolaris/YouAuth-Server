@@ -2,8 +2,8 @@ package httpapi
 
 import (
 	"github.com/allentom/haruka"
+	"github.com/projectxpolaris/youauth/service"
 	"net/http"
-	"youauth/service"
 )
 
 type CreateAppData struct {

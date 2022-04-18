@@ -1,6 +1,6 @@
 package httpapi
 
-import "youauth/database"
+import "github.com/projectxpolaris/youauth/database"
 
 type BaseAppTemplate struct {
 	Name   string `json:"name"`
