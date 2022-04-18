@@ -17,7 +17,6 @@ FROM ubuntu
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
-RUN apt update && apt install -y ffmpeg
 COPY --from=builder /go/bin/youauth /usr/local/bin/youauth
 
 ENTRYPOINT ["/usr/local/bin/youauth","run"]
