@@ -23,9 +23,8 @@ type AccessToken struct {
 
 type RefreshToken struct {
 	gorm.Model
-	Token         string
-	UserId        uint
-	AccessTokenId uint
-	AccessToken   *AccessToken
-	User          *User
+	Token       string
+	UserId      uint
+	AccessToken *AccessToken
+	User        *User
 }

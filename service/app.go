@@ -137,7 +137,6 @@ func GenerateAppToken(authCode string, appId string, secret string) (string, str
 	if err != nil {
 		return "", "", err
 	}
-	storeRefreshToken.AccessTokenId = storeAccessToken.ID
 	err = database.Instance.Save(storeRefreshToken).Error
 	if err != nil {
 		return "", "", err
