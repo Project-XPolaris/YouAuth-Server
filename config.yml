@@ -19,7 +19,7 @@ token:
   authCodeExpiresIn: 300
   refreshTokenExpiresIn: 2592000
   accessTokenExpiresIn: 2592000
-#  accessTokenExpiresIn: 3
   appTokenExpiresIn: 864000000
   issuer: "youauth"
   secret: "aaabbbcccddd"
+  url: "http:/localhost:8602"

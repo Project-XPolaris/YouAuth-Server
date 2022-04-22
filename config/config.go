@@ -25,6 +25,7 @@ type JWTConfig struct {
 	RefreshTokenExpire int64
 	AuthCodeExpires    int64
 	AppTokenExpire     int64
+	Url                string
 }
 type Config struct {
 	JWTConfig JWTConfig
@@ -43,6 +44,8 @@ func ReadConfig(provider *config.Provider) {
 			AccessTokenExpire:  configer.GetInt64("token.accessTokenExpiresIn"),
 			RefreshTokenExpire: configer.GetInt64("token.refreshTokenExpiresIn"),
 			AuthCodeExpires:    configer.GetInt64("token.authCodeExpiresIn"),
+			AppTokenExpire:     configer.GetInt64("token.appTokenExpiresIn"),
+			Url:                configer.GetString("token.url"),
 		},
 	}
 }

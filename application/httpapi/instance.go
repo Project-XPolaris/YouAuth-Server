@@ -27,6 +27,7 @@ func GetEngine() *haruka.Engine {
 	e.Router.POST("/users", createUserHandler)
 	e.Router.POST("/user/auth", generateAuthHandler)
 	e.Router.POST("/apps", createAppHandler)
+	e.Router.GET("/info", infoHandler)
 	e.Router.Static("/static", "./static")
 	return e
 }
