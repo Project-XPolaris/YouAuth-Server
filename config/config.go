@@ -28,7 +28,8 @@ type JWTConfig struct {
 	Url                string
 }
 type Config struct {
-	JWTConfig JWTConfig
+	JWTConfig         JWTConfig
+	ExternalLoginPage string
 }
 
 func ReadConfig(provider *config.Provider) {
@@ -47,5 +48,6 @@ func ReadConfig(provider *config.Provider) {
 			AppTokenExpire:     configer.GetInt64("token.appTokenExpiresIn"),
 			Url:                configer.GetString("token.url"),
 		},
+		ExternalLoginPage: configer.GetString("externalLoginPage"),
 	}
 }

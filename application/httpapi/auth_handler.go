@@ -1,10 +1,14 @@
 package httpapi
 
 import (
+	"errors"
 	"fmt"
 	"github.com/allentom/haruka"
+	"github.com/projectxpolaris/youauth/config"
+	"github.com/projectxpolaris/youauth/database"
 	"github.com/projectxpolaris/youauth/service"
 	"net/http"
+	"net/url"
 )
 
 var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
@@ -15,6 +19,25 @@ var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
 		return
 	}
 	redirectUrl := context.GetQueryString("redirect")
+	if config.Instance.ExternalLoginPage != "" {
+		url, err := url.Parse(config.Instance.ExternalLoginPage)
+		if err != nil {
+			RaiseErrorHtml(context)
+			return
+		}
+		query := url.Query()
+		query.Add("appid", appId)
+		query.Add("redirect", redirectUrl)
+		url.RawQuery = query.Encode()
+
+		http.Redirect(
+			context.Writer,
+			context.Request,
+			url.String(),
+			http.StatusFound,
+		)
+		return
+	}
 	context.HTML("./templates/login.html", map[string]interface{}{
 		"AppName":  app.Name,
 		"Redirect": redirectUrl,
@@ -80,7 +103,21 @@ var oauthLoginHandler haruka.RequestHandler = func(context *haruka.Context) {
 		RaiseErrorHtml(context)
 		return
 	}
-	http.Redirect(context.Writer, context.Request, fmt.Sprintf("/login/success?redirect=%s?code=%s", requestBody.RedirectUrl, authCode), http.StatusFound)
+	u, err := url.Parse(requestBody.RedirectUrl)
+	if err != nil {
+		RaiseErrorHtml(context)
+		return
+	}
+	qry := u.Query()
+	qry.Set("code", authCode)
+	u.RawQuery = qry.Encode()
+	red := u.String()
+	fmt.Println(red)
+	resultUrl, _ := url.Parse("/login/success")
+	resultQry := resultUrl.Query()
+	resultQry.Set("redirect", red)
+	resultUrl.RawQuery = resultQry.Encode()
+	http.Redirect(context.Writer, context.Request, resultUrl.String(), http.StatusFound)
 }
 
 type GetOauthTokenData struct {
@@ -96,7 +133,6 @@ var getOauthTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
 		AbortError(context, err, http.StatusBadRequest)
 		return
 	}
-
 	accessTokenString, refreshTokenString, err := service.GenerateAppToken(requestBody.Code, requestBody.AppId, requestBody.Secret)
 	if err != nil {
 		AbortError(context, err, http.StatusBadRequest)
@@ -174,4 +210,80 @@ var getCurrentUserHandler haruka.RequestHandler = func(context *haruka.Context) 
 	}
 	template := NewUserTemplate(user)
 	MakeSuccessResponseWithData(context, template)
+}
+
+var getUserListHandler haruka.RequestHandler = func(context *haruka.Context) {
+	queryBuilder := service.UserQueryBuilder{}
+	err := context.BindingInput(&queryBuilder)
+	if err != nil {
+		AbortError(context, err, http.StatusBadRequest)
+		return
+	}
+	if queryBuilder.Page < 1 {
+		queryBuilder.Page = 1
+	}
+	if queryBuilder.PageSize < 1 {
+		queryBuilder.PageSize = 20
+	}
+	users, count, err := queryBuilder.GetDataAndCount()
+	if err != nil {
+		AbortError(context, err, http.StatusInternalServerError)
+		return
+	}
+	data := NewUserTemplateList(users)
+	MakeListResponse(context, data, count, queryBuilder.Page, queryBuilder.PageSize)
+}
+
+var deleteUserHandler = func(context *haruka.Context) {
+	userId := context.GetPathParameterAsString("id")
+	err := service.DeleteUser(userId)
+	if err != nil {
+		AbortError(context, err, http.StatusInternalServerError)
+		return
+	}
+	MakeSuccessResponse(context)
+}
+
+type ChangePasswordData struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
+var changePasswordHandler = func(context *haruka.Context) {
+	var requestBody ChangePasswordData
+	err := context.ParseJson(&requestBody)
+	if err != nil {
+		AbortError(context, err, http.StatusBadRequest)
+		return
+	}
+	rawUser := context.Param["user"]
+	if rawUser == nil {
+		AbortError(context, errors.New("user not found"), http.StatusBadRequest)
+		return
+	}
+	user := rawUser.(*database.User)
+	err = service.ChangePassword(user.ID, requestBody.OldPassword, requestBody.NewPassword)
+	if err != nil {
+		AbortError(context, err, http.StatusInternalServerError)
+		return
+	}
+	MakeSuccessResponse(context)
+}
+
+var generateAuthCodeHandler = func(context *haruka.Context) {
+	rawUser := context.Param["user"]
+	if rawUser == nil {
+		AbortError(context, errors.New("user not found"), http.StatusBadRequest)
+		return
+	}
+	user := rawUser.(*database.User)
+	appId := context.GetQueryString("appid")
+	authCode, err := service.LoginWithUser(user.ID, appId)
+	if err != nil {
+		AbortError(context, err, http.StatusInternalServerError)
+		return
+	}
+	MakeSuccessResponseWithData(context, haruka.JSON{
+		"authCode": authCode,
+	})
 }

@@ -21,11 +21,12 @@ type AuthClaim struct {
 	Type string `json:"type"`
 }
 
-func CreateApp(name string, callbackUrl string) (*database.App, error) {
+func CreateApp(name string, callbackUrl string, userId uint) (*database.App, error) {
 	app := database.App{
 		Name:     name,
 		AppId:    xid.New().String(),
 		Callback: callbackUrl,
+		UserId:   userId,
 	}
 	claims := &jwt.StandardClaims{
 		Id:        app.AppId,
@@ -64,30 +65,46 @@ func LoginWithApp(appId string, username string, password string) (*database.Use
 		return nil, "", err
 	}
 
-	encodePassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, "", err
-	}
-	user := &database.User{Username: username, Password: string(encodePassword)}
-	err = database.Instance.First(user).Error
+	user := &database.User{Username: username}
+	err = database.Instance.Where("username = ?", username).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, "", InvalidateUsernameOrPassword
 		}
 		return nil, "", err
 	}
-
-	authId := xid.New().String()
-	authCode := database.AuthorizationCode{
-		Code:   authId,
-		AppId:  app.ID,
-		UserId: user.ID,
+	encryptionErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if encryptionErr != nil {
+		return nil, "", InvalidateUsernameOrPassword
 	}
-	err = database.Instance.Create(&authCode).Error
+	authId, err := GenerateAuthCode(user.ID, app.ID)
 	if err != nil {
 		return nil, "", err
 	}
 	return user, authId, nil
+}
+func LoginWithUser(userId uint, appId string) (string, error) {
+	app := database.App{
+		AppId: appId,
+	}
+	err := database.Instance.Where("app_id = ?", appId).First(&app).Error
+	if err != nil {
+		return "", err
+	}
+	return GenerateAuthCode(userId, app.ID)
+}
+func GenerateAuthCode(userId uint, appId uint) (string, error) {
+	authId := xid.New().String()
+	authCode := database.AuthorizationCode{
+		Code:   authId,
+		AppId:  appId,
+		UserId: userId,
+	}
+	err := database.Instance.Create(&authCode).Error
+	if err != nil {
+		return "", err
+	}
+	return authId, nil
 }
 
 func GenerateAppToken(authCode string, appId string, secret string) (string, string, error) {
@@ -204,4 +221,70 @@ func newJWTClaims(claimsType string, id string, appId string) *AuthClaim {
 		Type: claimsType,
 	}
 	return accessTokenClaims
+}
+
+type AppQueryBuilder struct {
+	Ids        []string `hsource:"query" hname:"ids"`
+	NameSearch string   `hsource:"query" hname:"search"`
+	Name       string   `hsource:"query" hname:"name"`
+	Page       int      `hsource:"query" hname:"page"`
+	PageSize   int      `hsource:"query" hname:"pageSize"`
+	Order      string   `hsource:"query" hname:"order"`
+	UserId     uint
+}
+
+func (b *AppQueryBuilder) GetDataAndCount() ([]*database.App, int64, error) {
+	apps := make([]*database.App, 0)
+	var count int64
+	query := database.Instance.Model(&database.App{})
+	if len(b.Ids) > 0 {
+		query = query.Where("id in (?)", b.Ids)
+	}
+	if b.NameSearch != "" {
+		query = query.Where("name like ?", "%"+b.NameSearch+"%")
+	}
+	if b.Name != "" {
+		query = query.Where("name = ?", b.Name)
+	}
+	if b.Order != "" {
+		query = query.Order(b.Order)
+	}
+	if b.UserId > 0 {
+		query = query.Where("user_id = ?", b.UserId)
+	}
+	err := query.Offset((b.Page - 1) * b.PageSize).
+		Limit(b.PageSize).
+		Find(&apps).
+		Offset(-1).
+		Count(&count).
+		Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return apps, count, nil
+}
+
+func RemoveAppByAppId(appId string, userId uint) error {
+	// find app
+	app := &database.App{}
+	err := database.Instance.Where("app_id = ?", appId).First(app).Error
+	if err != nil {
+		return err
+	}
+	if app.UserId != userId {
+		return InvalidateAppError
+	}
+	err = database.Instance.Unscoped().Delete(&database.App{}, "app_id = ?", appId).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func GetAppByAppId(appId string) (*database.App, error) {
+	app := &database.App{}
+	err := database.Instance.Where("app_id = ?", appId).First(app).Error
+	if err != nil {
+		return nil, err
+	}
+	return app, nil
 }

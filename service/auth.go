@@ -8,7 +8,6 @@ import (
 	"github.com/projectxpolaris/youauth/database"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"time"
 )
 
 var InvalidateUsernameOrPassword = errors.New("invalid username or password")
@@ -30,12 +29,8 @@ func CreateUser(Username string, Password string) (*database.User, error) {
 }
 
 func GenerateToken(username string, password string) (string, *database.User, error) {
-	encodePassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", nil, err
-	}
-	user := &database.User{Username: username, Password: string(encodePassword)}
-	err = database.Instance.First(user).Error
+	user := &database.User{Username: username}
+	err := database.Instance.Where("username = ?", username).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return "", nil, InvalidateUsernameOrPassword
@@ -43,18 +38,23 @@ func GenerateToken(username string, password string) (string, *database.User, er
 		return "", nil, err
 	}
 
-	claims := &jwt.StandardClaims{
-		Id:        user.Username,
-		ExpiresAt: time.Now().Add(time.Duration(config.Instance.JWTConfig.AccessTokenExpire) * time.Second).Unix(),
-		Issuer:    config.Instance.JWTConfig.Issuer,
+	encryptionErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if encryptionErr != nil {
+		return "", nil, InvalidateUsernameOrPassword
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString([]byte(config.Instance.JWTConfig.Secret))
+	_, accessTokenString, err := newJWTClaimsAndTokenString("access", username, "self")
 	if err != nil {
 		return "", nil, err
 	}
-	return ss, user, nil
+	storeAccessToken := &database.AccessToken{
+		TokenId: accessTokenString,
+		UserId:  user.ID,
+	}
+	err = database.Instance.Create(storeAccessToken).Error
+	if err != nil {
+		return "", nil, err
+	}
+	return accessTokenString, user, nil
 
 }
 
@@ -90,13 +90,22 @@ func GetCurrentUser(accessToken string) (*database.User, error) {
 		return nil, err
 	}
 	// check app is valid
-	if accessTokenRecord.App == nil {
+	if accessTokenRecord.App == nil && authClaim.Subject != "self" {
 		return nil, InvalidateAppError
 	}
-	user := &database.User{Username: authClaim.Id}
-	err = database.Instance.First(user).Error
+	user := &database.User{}
+	err = database.Instance.Where("username = ?", authClaim.Id).First(user).Error
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
+}
+
+func ParseAuthToken(tokenString string) (*database.AccessToken, error) {
+	accessToken := &database.AccessToken{}
+	err := database.Instance.Preload("User").Where("token_id = ?", tokenString).First(accessToken).Error
+	if err != nil {
+		return nil, err
+	}
+	return accessToken, nil
 }

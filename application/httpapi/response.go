@@ -35,6 +35,11 @@ func AbortError(ctx *haruka.Context, err error, status int) {
 	}, status)
 }
 
+func MakeSuccessResponse(context *haruka.Context) {
+	context.JSON(haruka.JSON{
+		"success": true,
+	})
+}
 func MakeSuccessResponseWithData(context *haruka.Context, data interface{}) {
 	context.JSON(haruka.JSON{
 		"success": true,
@@ -42,6 +47,17 @@ func MakeSuccessResponseWithData(context *haruka.Context, data interface{}) {
 	})
 }
 
+func MakeListResponse(context *haruka.Context, data interface{}, total int64, pageSize int, page int) {
+	context.JSON(haruka.JSON{
+		"success": true,
+		"data": haruka.JSON{
+			"total":    total,
+			"pageSize": pageSize,
+			"page":     page,
+			"result":   data,
+		},
+	})
+}
 func RaiseErrorHtml(ctx *haruka.Context) {
 	ctx.HTML("./templates/404.html", map[string]interface{}{})
 }

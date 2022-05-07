@@ -8,4 +8,5 @@ type App struct {
 	Name     string
 	Callback string
 	Secret   string
+	UserId   uint
 }
