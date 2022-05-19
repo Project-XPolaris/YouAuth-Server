@@ -26,7 +26,7 @@ func CreateApp(name string, callbackUrl string, userId uint) (*database.App, err
 		Name:     name,
 		AppId:    xid.New().String(),
 		Callback: callbackUrl,
-		UserId:   userId,
+		UserId:   &userId,
 	}
 	claims := &jwt.StandardClaims{
 		Id:        app.AppId,
@@ -97,8 +97,8 @@ func GenerateAuthCode(userId uint, appId uint) (string, error) {
 	authId := xid.New().String()
 	authCode := database.AuthorizationCode{
 		Code:   authId,
-		AppId:  appId,
-		UserId: userId,
+		AppId:  &appId,
+		UserId: &userId,
 	}
 	err := database.Instance.Create(&authCode).Error
 	if err != nil {
@@ -136,25 +136,21 @@ func GenerateAppToken(authCode string, appId string, secret string) (string, str
 	if err != nil {
 		return "", "", err
 	}
-	storeRefreshToken := &database.RefreshToken{
-		UserId: authRecord.User.ID,
-		Token:  refreshTokenString,
-	}
-	err = database.Instance.Create(&storeRefreshToken).Error
-	if err != nil {
-		return "", "", err
-	}
 	storeAccessToken := &database.AccessToken{
-		TokenId:        accessTokenString,
-		UserId:         authRecord.User.ID,
-		RefreshTokenId: storeRefreshToken.ID,
-		AppId:          authRecord.App.ID,
+		TokenId: accessTokenString,
+		UserId:  &authRecord.User.ID,
+		AppId:   &authRecord.App.ID,
 	}
 	err = database.Instance.Create(storeAccessToken).Error
 	if err != nil {
 		return "", "", err
 	}
-	err = database.Instance.Save(storeRefreshToken).Error
+	storeRefreshToken := &database.RefreshToken{
+		UserId:        authRecord.User.ID,
+		Token:         refreshTokenString,
+		AccessTokenId: storeAccessToken.ID,
+	}
+	err = database.Instance.Create(&storeRefreshToken).Error
 	if err != nil {
 		return "", "", err
 	}
@@ -271,7 +267,7 @@ func RemoveAppByAppId(appId string, userId uint) error {
 	if err != nil {
 		return err
 	}
-	if app.UserId != userId {
+	if *app.UserId != userId {
 		return InvalidateAppError
 	}
 	err = database.Instance.Unscoped().Delete(&database.App{}, "app_id = ?", appId).Error

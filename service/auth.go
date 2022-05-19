@@ -48,7 +48,7 @@ func GenerateToken(username string, password string) (string, *database.User, er
 	}
 	storeAccessToken := &database.AccessToken{
 		TokenId: accessTokenString,
-		UserId:  user.ID,
+		UserId:  &user.ID,
 	}
 	err = database.Instance.Create(storeAccessToken).Error
 	if err != nil {
