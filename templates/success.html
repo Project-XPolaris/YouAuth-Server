@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <title>Success</title>
     <script>
-        var redirectToApp = function () {
-            window.location.replace("{{ .Redirect }}");
+        const redirectUrl = "{{ .Redirect }}"
+        const redirectToApp = function () {
+            window.location.replace(redirectUrl);
         };
-        window.onload = redirectToApp;
-
+        if (redirectUrl !== "") {
+            window.onload = redirectToApp;
+        }
     </script>
 </head>
 <body>
