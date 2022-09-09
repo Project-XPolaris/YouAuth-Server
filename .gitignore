@@ -3,3 +3,4 @@
 data/
 local_*_test.go
 .idea/
+local_*_config.yml

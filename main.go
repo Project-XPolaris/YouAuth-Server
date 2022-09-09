@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/allentom/harukap"
 	"github.com/allentom/harukap/cli"
-	"github.com/projectxpolaris/youauth/application/httpapi"
+	httpapi "github.com/projectxpolaris/youauth/application/httpapi"
 	"github.com/projectxpolaris/youauth/config"
 	"github.com/projectxpolaris/youauth/database"
-	"github.com/projectxpolaris/youauth/youlog"
+	"github.com/projectxpolaris/youauth/plugins/youlog"
 	"github.com/sirupsen/logrus"
 )
 

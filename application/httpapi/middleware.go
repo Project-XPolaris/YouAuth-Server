@@ -41,7 +41,7 @@ func (m *AuthMiddleware) OnRequest(ctx *haruka.Context) {
 		rawString = strings.Replace(rawString, "Bearer ", "", 1)
 		token, err := service.ParseAuthToken(rawString)
 		if err != nil {
-			ctx.Interrupt()
+			ctx.Abort()
 			AbortError(ctx, err, http.StatusForbidden)
 			return
 		}
@@ -49,5 +49,5 @@ func (m *AuthMiddleware) OnRequest(ctx *haruka.Context) {
 		return
 	}
 	AbortError(ctx, errors.New("auth failed"), http.StatusForbidden)
-	ctx.Interrupt()
+	ctx.Abort()
 }
