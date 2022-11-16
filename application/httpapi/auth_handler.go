@@ -12,13 +12,13 @@ import (
 )
 
 var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
-	appId := context.GetQueryString("appid")
+	appId := context.GetQueryString("client_id")
 	app, err := service.GetAppWithAppId(appId)
 	if err != nil {
 		RaiseErrorHtml(context)
 		return
 	}
-	redirectUrl := context.GetQueryString("redirect")
+	redirectUrl := context.GetQueryString("redirect_url")
 	if config.Instance.ExternalLoginPage != "" {
 		url, err := url.Parse(config.Instance.ExternalLoginPage)
 		if err != nil {
@@ -26,8 +26,8 @@ var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
 			return
 		}
 		query := url.Query()
-		query.Add("appid", appId)
-		query.Add("redirect", redirectUrl)
+		query.Add("client_id", appId)
+		query.Add("redirect_url", redirectUrl)
 		url.RawQuery = query.Encode()
 
 		http.Redirect(
@@ -38,6 +38,7 @@ var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
 		)
 		return
 	}
+	fmt.Println("redirect url = ", redirectUrl)
 	context.HTML("./templates/login.html", map[string]interface{}{
 		"AppName":  app.Name,
 		"Redirect": redirectUrl,
@@ -121,9 +122,12 @@ var oauthLoginHandler haruka.RequestHandler = func(context *haruka.Context) {
 }
 
 type GetOauthTokenData struct {
-	AppId  string `json:"appId"`
-	Code   string `json:"code"`
-	Secret string `json:"secret"`
+	AppId     string `json:"appId"`
+	Code      string `json:"code"`
+	Secret    string `json:"secret"`
+	GrantType string `json:"grantType"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
 }
 
 var getOauthTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
@@ -133,18 +137,72 @@ var getOauthTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
 		AbortError(context, err, http.StatusBadRequest)
 		return
 	}
-	accessTokenString, refreshTokenString, err := service.GenerateAppToken(requestBody.Code, requestBody.AppId, requestBody.Secret)
+	var accessToken string
+	var refreshToken string
+	switch requestBody.GrantType {
+	case "password":
+		accessToken, refreshToken, err = service.GenerateAppTokenByPassword(requestBody.AppId, requestBody.Username, requestBody.Password)
+	default:
+		accessToken, refreshToken, err = service.GenerateAppToken(requestBody.Code)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
+	}
+	template := NewBaseAppAuthTemplate(accessToken, refreshToken)
+	context.JSON(template)
+}
+
+type GenerateTokenBody struct {
+	Code         string `hsource:"form" hname:"code"`
+	GrantType    string `hsource:"form" hname:"grant_type"`
+	ClientId     string `hsource:"form" hname:"client_id"`
+	Username     string `hsource:"form" hname:"username"`
+	Password     string `hsource:"form" hname:"password"`
+	RefreshToken string `hsource:"form" hname:"refresh_token"`
+}
+
+var generateTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
+	var requestBody GenerateTokenBody
+	err := context.Request.ParseForm()
 	if err != nil {
 		AbortError(context, err, http.StatusBadRequest)
 		return
 	}
-	template := NewBaseAppAuthTemplate(accessTokenString, refreshTokenString)
-	MakeSuccessResponseWithData(context, template)
+	err = context.BindingInput(&requestBody)
+	if err != nil {
+		AbortError(context, err, http.StatusBadRequest)
+		return
+	}
+	var accessToken string
+	var refreshToken string
+	switch requestBody.GrantType {
+	case "password":
+		accessToken, refreshToken, err = service.GenerateAppTokenByPassword(requestBody.ClientId, requestBody.Username, requestBody.Password)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
+	case "authorization_code":
+		accessToken, refreshToken, err = service.GenerateAppToken(requestBody.Code)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
+	case "refresh_token":
+		accessToken, refreshToken, err = service.RefreshToken(requestBody.RefreshToken)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
+
+	}
+	template := NewBaseAppAuthTemplate(accessToken, refreshToken)
+	context.JSON(template)
 }
 
 type RefreshOauthTokenData struct {
 	RefreshToken string `json:"refreshToken"`
-	Secret       string `json:"secret"`
 }
 
 var refreshAccessToken haruka.RequestHandler = func(context *haruka.Context) {
@@ -154,7 +212,7 @@ var refreshAccessToken haruka.RequestHandler = func(context *haruka.Context) {
 		AbortError(context, err, http.StatusBadRequest)
 		return
 	}
-	accessTokenString, refreshTokenString, err := service.RefreshToken(requestBody.RefreshToken, requestBody.Secret)
+	accessTokenString, refreshTokenString, err := service.RefreshToken(requestBody.RefreshToken)
 	if err != nil {
 		AbortError(context, err, http.StatusInternalServerError)
 		return

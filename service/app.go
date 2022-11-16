@@ -106,8 +106,52 @@ func GenerateAuthCode(userId uint, appId uint) (string, error) {
 	}
 	return authId, nil
 }
-
-func GenerateAppToken(authCode string, appId string, secret string) (string, string, error) {
+func GenerateAppTokenByPassword(appId string, username string, password string) (string, string, error) {
+	app, err := GetAppByAppId(appId)
+	if err != nil {
+		return "", "", err
+	}
+	user := &database.User{Username: username}
+	err = database.Instance.Where("username = ?", username).First(user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", "", InvalidateUsernameOrPassword
+		}
+		return "", "", err
+	}
+	encryptionErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if encryptionErr != nil {
+		return "", "", InvalidateUsernameOrPassword
+	}
+	_, accessTokenString, err := newJWTClaimsAndTokenString("access", username, "self")
+	if err != nil {
+		return "", "", err
+	}
+	_, refreshTokenString, err := newJWTClaimsAndTokenString("refresh", user.Username, app.AppId)
+	if err != nil {
+		return "", "", err
+	}
+	storeAccessToken := &database.AccessToken{
+		TokenId: accessTokenString,
+		UserId:  &user.ID,
+		AppId:   &app.ID,
+	}
+	err = database.Instance.Create(storeAccessToken).Error
+	if err != nil {
+		return "", "", err
+	}
+	storeRefreshToken := &database.RefreshToken{
+		UserId:        user.ID,
+		Token:         refreshTokenString,
+		AccessTokenId: storeAccessToken.ID,
+	}
+	err = database.Instance.Create(storeRefreshToken).Error
+	if err != nil {
+		return "", "", err
+	}
+	return accessTokenString, refreshTokenString, nil
+}
+func GenerateAppToken(authCode string) (string, string, error) {
 	authRecord := &database.AuthorizationCode{
 		Code: authCode,
 	}
@@ -122,10 +166,6 @@ func GenerateAppToken(authCode string, appId string, secret string) (string, str
 	err = database.Instance.Preload("User").Preload("App").Where("code = ?", authCode).First(authRecord).Error
 	if err != nil {
 		return "", "", err
-	}
-	// check app is valid
-	if authRecord.App.AppId != appId || authRecord.App.Secret != secret {
-		return "", "", InvalidateAppError
 	}
 	_, accessTokenString, err := newJWTClaimsAndTokenString("access", authRecord.User.Username, authRecord.App.AppId)
 	if err != nil {
@@ -159,17 +199,13 @@ func GenerateAppToken(authCode string, appId string, secret string) (string, str
 	return accessTokenString, refreshTokenString, nil
 }
 
-func RefreshToken(refreshToken string, secret string) (string, string, error) {
+func RefreshToken(refreshToken string) (string, string, error) {
 	refreshTokenRecord := &database.RefreshToken{}
 	err := database.Instance.Preload("AccessToken").Preload("User").Preload("AccessToken.App").Where("token = ?", refreshToken).First(refreshTokenRecord).Error
 	if err != nil {
 		return "", "", err
 	}
 	// check app is valid
-
-	if refreshTokenRecord.AccessToken.App.Secret != secret {
-		return "", "", InvalidateAppError
-	}
 	_, accessTokenString, err := newJWTClaimsAndTokenString("access", refreshTokenRecord.User.Username, refreshTokenRecord.AccessToken.App.AppId)
 	if err != nil {
 		return "", "", err
@@ -179,11 +215,30 @@ func RefreshToken(refreshToken string, secret string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	err = database.Instance.Unscoped().Delete(refreshTokenRecord).Error
+	if err != nil {
+		return "", "", err
+	}
 	err = database.Instance.Unscoped().Delete(refreshTokenRecord.AccessToken).Error
 	if err != nil {
 		return "", "", err
 	}
-	err = database.Instance.Unscoped().Delete(refreshTokenRecord).Error
+	// save new access token
+	storeAccessToken := &database.AccessToken{
+		TokenId: accessTokenString,
+		UserId:  &refreshTokenRecord.User.ID,
+		AppId:   &refreshTokenRecord.AccessToken.App.ID,
+	}
+	err = database.Instance.Create(storeAccessToken).Error
+	if err != nil {
+		return "", "", err
+	}
+	storeRefreshToken := &database.RefreshToken{
+		UserId:        refreshTokenRecord.User.ID,
+		Token:         refreshTokenString,
+		AccessTokenId: storeAccessToken.ID,
+	}
+	err = database.Instance.Create(&storeRefreshToken).Error
 	if err != nil {
 		return "", "", err
 	}

@@ -21,6 +21,7 @@ var NoAuthUrls = []string{
 	"/info",
 	"/users/register",
 	"/oauth/app",
+	"/token",
 }
 
 type AuthMiddleware struct {

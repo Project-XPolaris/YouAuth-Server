@@ -23,10 +23,10 @@ func GetEngine() *haruka.Engine {
 	e.Router.GET("/login/success", loginSuccessHandler)
 	e.Router.POST("/login/oauth", oauthLoginHandler)
 	e.Router.POST("/oauth/token", getOauthTokenHandler)
+	e.Router.POST("/token", generateTokenHandler)
 	e.Router.POST("/oauth/refresh", refreshAccessToken)
 	e.Router.GET("/oauth/app", getAppHandler)
 	e.Router.POST("/oauth/authcode", generateAuthCodeHandler)
-
 	e.Router.GET("/auth/current", getCurrentUserHandler)
 	e.Router.POST("/users/register", createUserHandler)
 	e.Router.GET("/users", getUserListHandler)
