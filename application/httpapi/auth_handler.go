@@ -154,26 +154,39 @@ var getOauthTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
 }
 
 type GenerateTokenBody struct {
-	Code         string `hsource:"form" hname:"code"`
-	GrantType    string `hsource:"form" hname:"grant_type"`
-	ClientId     string `hsource:"form" hname:"client_id"`
-	Username     string `hsource:"form" hname:"username"`
-	Password     string `hsource:"form" hname:"password"`
-	RefreshToken string `hsource:"form" hname:"refresh_token"`
+	Code         string `hsource:"form" hname:"code" json:"code"`
+	GrantType    string `hsource:"form" hname:"grant_type" json:"grant_type"`
+	ClientId     string `hsource:"form" hname:"client_id" json:"client_id"`
+	Username     string `hsource:"form" hname:"username" json:"username"`
+	Password     string `hsource:"form" hname:"password" json:"password"`
+	RefreshToken string `hsource:"form" hname:"refresh_token" json:"refresh_token"`
 }
 
 var generateTokenHandler haruka.RequestHandler = func(context *haruka.Context) {
 	var requestBody GenerateTokenBody
-	err := context.Request.ParseForm()
-	if err != nil {
-		AbortError(context, err, http.StatusBadRequest)
-		return
+	var err error
+	// is form content type
+	if context.Request.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+		err := context.Request.ParseForm()
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
+		err = context.BindingInput(&requestBody)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
 	}
-	err = context.BindingInput(&requestBody)
-	if err != nil {
-		AbortError(context, err, http.StatusBadRequest)
-		return
+	// is json content type
+	if context.Request.Header.Get("Content-Type") == "application/json" {
+		err := context.ParseJson(&requestBody)
+		if err != nil {
+			AbortError(context, err, http.StatusBadRequest)
+			return
+		}
 	}
+
 	var accessToken string
 	var refreshToken string
 	switch requestBody.GrantType {
