@@ -37,7 +37,6 @@ func ReadConfig(provider *config.Provider) {
 	configer.SetDefault("addr", ":8000")
 	configer.SetDefault("application", "You Auth Service")
 	configer.SetDefault("instance", "main")
-
 	Instance = Config{
 		JWTConfig: JWTConfig{
 			Secret:             configer.GetString("token.secret"),

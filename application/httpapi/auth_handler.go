@@ -38,7 +38,6 @@ var loginHandler haruka.RequestHandler = func(context *haruka.Context) {
 		)
 		return
 	}
-	fmt.Println("redirect url = ", redirectUrl)
 	context.HTML("./templates/login.html", map[string]interface{}{
 		"AppName":  app.Name,
 		"Redirect": redirectUrl,
@@ -263,7 +262,7 @@ var generateAuthHandler haruka.RequestHandler = func(context *haruka.Context) {
 		AbortError(context, err, http.StatusBadRequest)
 		return
 	}
-	token, user, err := service.GenerateToken(requestBody.Username, requestBody.Password)
+	token, user, err := service.GenerateSelfToken(requestBody.Username, requestBody.Password)
 	if err != nil {
 		AbortError(context, err, http.StatusBadRequest)
 		return

@@ -38,17 +38,23 @@ func (m *AuthMiddleware) OnRequest(ctx *haruka.Context) {
 	if len(rawString) == 0 {
 		rawString = ctx.GetQueryString("token")
 	}
-	if len(rawString) > 0 {
-		rawString = strings.Replace(rawString, "Bearer ", "", 1)
-		token, err := service.ParseAuthToken(rawString)
-		if err != nil {
-			ctx.Abort()
-			AbortError(ctx, err, http.StatusForbidden)
-			return
-		}
-		ctx.Param["user"] = token.User
+	if len(rawString) == 0 {
+		AbortError(ctx, errors.New("auth failed"), http.StatusForbidden)
+		ctx.Abort()
 		return
 	}
-	AbortError(ctx, errors.New("auth failed"), http.StatusForbidden)
-	ctx.Abort()
+	rawString = strings.Replace(rawString, "Bearer ", "", 1)
+	token, err := service.ParseToken(rawString)
+	if err != nil {
+		ctx.Abort()
+		AbortError(ctx, err, http.StatusForbidden)
+		return
+	}
+	user, err := service.GetUserById(token.Id)
+	if err != nil {
+		ctx.Abort()
+		AbortError(ctx, err, http.StatusForbidden)
+		return
+	}
+	ctx.Param["user"] = user
 }

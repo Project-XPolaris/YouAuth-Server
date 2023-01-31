@@ -10,21 +10,3 @@ type AuthorizationCode struct {
 	User   *User
 	App    *App
 }
-type AccessToken struct {
-	gorm.Model
-	TokenId      string
-	UserId       *uint
-	AppId        *uint
-	RefreshToken *RefreshToken
-	User         *User
-	App          *App
-}
-
-type RefreshToken struct {
-	gorm.Model
-	Token         string
-	UserId        uint
-	AccessTokenId uint
-	AccessToken   *AccessToken
-	User          *User
-}

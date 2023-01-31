@@ -8,6 +8,6 @@ import (
 var DefaultPlugin = &datasource.Plugin{
 	OnConnected: func(db *gorm.DB) {
 		Instance = db
-		Instance.AutoMigrate(&User{}, &App{}, &AccessToken{}, &RefreshToken{}, &AuthorizationCode{})
+		Instance.AutoMigrate(&User{}, &App{}, &AuthorizationCode{})
 	},
 }

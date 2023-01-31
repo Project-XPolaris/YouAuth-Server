@@ -62,23 +62,3 @@ type BaseTokenTemplate struct {
 	CreateAt string           `json:"createAt"`
 	App      *BaseAppTemplate `json:"app,omitempty"`
 }
-
-func NewTokenTemplate(token *database.AccessToken) BaseTokenTemplate {
-	template := BaseTokenTemplate{
-		Id:       token.Model.ID,
-		CreateAt: token.CreatedAt.Format(timeFormat),
-	}
-	if token.App != nil {
-		appTemplate := NewBaseAppTemplateWithoutDetail(token.App)
-		template.App = &appTemplate
-	}
-	return template
-}
-
-func NewTokenListTemplate(tokens []*database.AccessToken) []BaseTokenTemplate {
-	tokenTemplates := make([]BaseTokenTemplate, 0)
-	for _, token := range tokens {
-		tokenTemplates = append(tokenTemplates, NewTokenTemplate(token))
-	}
-	return tokenTemplates
-}

@@ -28,7 +28,8 @@ func CreateUser(Username string, Password string) (*database.User, error) {
 	return user, nil
 }
 
-func GenerateToken(username string, password string) (string, *database.User, error) {
+// GenerateSelfToken generate token for youauth
+func GenerateSelfToken(username string, password string) (string, *database.User, error) {
 	user := &database.User{Username: username}
 	err := database.Instance.Where("username = ?", username).First(user).Error
 	if err != nil {
@@ -43,14 +44,6 @@ func GenerateToken(username string, password string) (string, *database.User, er
 		return "", nil, InvalidateUsernameOrPassword
 	}
 	_, accessTokenString, err := newJWTClaimsAndTokenString("access", username, "self")
-	if err != nil {
-		return "", nil, err
-	}
-	storeAccessToken := &database.AccessToken{
-		TokenId: accessTokenString,
-		UserId:  &user.ID,
-	}
-	err = database.Instance.Create(storeAccessToken).Error
 	if err != nil {
 		return "", nil, err
 	}
@@ -84,13 +77,8 @@ func GetCurrentUser(accessToken string) (*database.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	accessTokenRecord := &database.AccessToken{}
-	err = database.Instance.Preload("App").Where("token_id = ?", accessToken).First(accessTokenRecord).Error
-	if err != nil {
-		return nil, err
-	}
 	// check app is valid
-	if accessTokenRecord.App == nil && authClaim.Subject != "self" {
+	if authClaim.Subject != "self" {
 		return nil, InvalidateAppError
 	}
 	user := &database.User{}
@@ -99,13 +87,4 @@ func GetCurrentUser(accessToken string) (*database.User, error) {
 		return nil, err
 	}
 	return user, nil
-}
-
-func ParseAuthToken(tokenString string) (*database.AccessToken, error) {
-	accessToken := &database.AccessToken{}
-	err := database.Instance.Preload("User").Where("token_id = ?", tokenString).First(accessToken).Error
-	if err != nil {
-		return nil, err
-	}
-	return accessToken, nil
 }

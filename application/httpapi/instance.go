@@ -34,7 +34,6 @@ func GetEngine() *haruka.Engine {
 	e.Router.POST("/user/auth", generateAuthHandler)
 	e.Router.POST("/apps", createAppHandler)
 	e.Router.GET("/apps", getAppListHandler)
-	e.Router.GET("/my/tokens", getMyTokensHandler)
 	e.Router.POST("/my/password", changePasswordHandler)
 	e.Router.DELETE("/app/{appid:[0-9|a-z|A-Z]+}", removeAppHandler)
 	e.Router.GET("/info", infoHandler)

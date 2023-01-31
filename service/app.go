@@ -106,6 +106,8 @@ func GenerateAuthCode(userId uint, appId uint) (string, error) {
 	}
 	return authId, nil
 }
+
+// GenerateAppTokenByPassword for login with username and password with appid
 func GenerateAppTokenByPassword(appId string, username string, password string) (string, string, error) {
 	app, err := GetAppByAppId(appId)
 	if err != nil {
@@ -128,24 +130,6 @@ func GenerateAppTokenByPassword(appId string, username string, password string) 
 		return "", "", err
 	}
 	_, refreshTokenString, err := newJWTClaimsAndTokenString("refresh", user.Username, app.AppId)
-	if err != nil {
-		return "", "", err
-	}
-	storeAccessToken := &database.AccessToken{
-		TokenId: accessTokenString,
-		UserId:  &user.ID,
-		AppId:   &app.ID,
-	}
-	err = database.Instance.Create(storeAccessToken).Error
-	if err != nil {
-		return "", "", err
-	}
-	storeRefreshToken := &database.RefreshToken{
-		UserId:        user.ID,
-		Token:         refreshTokenString,
-		AccessTokenId: storeAccessToken.ID,
-	}
-	err = database.Instance.Create(storeRefreshToken).Error
 	if err != nil {
 		return "", "", err
 	}
@@ -176,69 +160,23 @@ func GenerateAppToken(authCode string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	storeAccessToken := &database.AccessToken{
-		TokenId: accessTokenString,
-		UserId:  &authRecord.User.ID,
-		AppId:   &authRecord.App.ID,
-	}
-	err = database.Instance.Create(storeAccessToken).Error
-	if err != nil {
-		return "", "", err
-	}
-	storeRefreshToken := &database.RefreshToken{
-		UserId:        authRecord.User.ID,
-		Token:         refreshTokenString,
-		AccessTokenId: storeAccessToken.ID,
-	}
-	err = database.Instance.Create(&storeRefreshToken).Error
-	if err != nil {
-		return "", "", err
-	}
+
 	// delete auth code
 	//err = database.Instance.Unscoped().Delete(authRecord).Error
 	return accessTokenString, refreshTokenString, nil
 }
 
 func RefreshToken(refreshToken string) (string, string, error) {
-	refreshTokenRecord := &database.RefreshToken{}
-	err := database.Instance.Preload("AccessToken").Preload("User").Preload("AccessToken.App").Where("token = ?", refreshToken).First(refreshTokenRecord).Error
+	refreshUserAuth, err := ParseToken(refreshToken)
 	if err != nil {
 		return "", "", err
 	}
 	// check app is valid
-	_, accessTokenString, err := newJWTClaimsAndTokenString("access", refreshTokenRecord.User.Username, refreshTokenRecord.AccessToken.App.AppId)
+	_, accessTokenString, err := newJWTClaimsAndTokenString("access", refreshUserAuth.Id, refreshUserAuth.Subject)
 	if err != nil {
 		return "", "", err
 	}
-
-	_, refreshTokenString, err := newJWTClaimsAndTokenString("refresh", refreshTokenRecord.User.Username, refreshTokenRecord.AccessToken.App.AppId)
-	if err != nil {
-		return "", "", err
-	}
-	err = database.Instance.Unscoped().Delete(refreshTokenRecord).Error
-	if err != nil {
-		return "", "", err
-	}
-	err = database.Instance.Unscoped().Delete(refreshTokenRecord.AccessToken).Error
-	if err != nil {
-		return "", "", err
-	}
-	// save new access token
-	storeAccessToken := &database.AccessToken{
-		TokenId: accessTokenString,
-		UserId:  &refreshTokenRecord.User.ID,
-		AppId:   &refreshTokenRecord.AccessToken.App.ID,
-	}
-	err = database.Instance.Create(storeAccessToken).Error
-	if err != nil {
-		return "", "", err
-	}
-	storeRefreshToken := &database.RefreshToken{
-		UserId:        refreshTokenRecord.User.ID,
-		Token:         refreshTokenString,
-		AccessTokenId: storeAccessToken.ID,
-	}
-	err = database.Instance.Create(&storeRefreshToken).Error
+	_, refreshTokenString, err := newJWTClaimsAndTokenString("refresh", refreshUserAuth.Id, refreshUserAuth.Subject)
 	if err != nil {
 		return "", "", err
 	}

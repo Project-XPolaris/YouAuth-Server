@@ -42,52 +42,17 @@ func (b *UserQueryBuilder) GetDataAndCount() ([]*database.User, int64, error) {
 	return users, count, nil
 }
 
+func GetUserById(id string) (*database.User, error) {
+	user := &database.User{}
+	err := database.Instance.Where("id = ?", id).First(user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func DeleteUser(id string) error {
 	return database.Instance.Unscoped().Model(&database.User{}).Where("id = ?", id).Delete(&database.User{}).Error
-}
-
-type TokenQueryBuilder struct {
-	Ids      []string `hsource:"query" hname:"ids"`
-	UserId   uint     `hsource:"query" hname:"userId"`
-	Page     int      `hsource:"query" hname:"page"`
-	PageSize int      `hsource:"query" hname:"pageSize"`
-	Order    string   `hsource:"query" hname:"order"`
-	Preload  []string `hsource:"query" hname:"preload"`
-	AppIds   []int64  `hsource:"query" hname:"appIds"`
-}
-
-func (b *TokenQueryBuilder) QueryWithCount() ([]*database.AccessToken, int64, error) {
-	tokens := make([]*database.AccessToken, 0)
-	var count int64
-	query := database.Instance.Model(&database.AccessToken{})
-	if len(b.Ids) > 0 {
-		query = query.Where("id in (?)", b.Ids)
-	}
-	if b.UserId != 0 {
-		query = query.Where("user_id = ?", b.UserId)
-	}
-	if b.Order != "" {
-		query = query.Order(b.Order)
-	}
-	if len(b.Preload) > 0 {
-		for _, key := range b.Preload {
-			query = query.Preload(key)
-		}
-	}
-	if len(b.AppIds) > 0 {
-		query = query.Where("app_id in (?)", b.AppIds)
-	}
-	query = query.Where("app_id > ?", 0)
-	err := query.Offset((b.Page - 1) * b.PageSize).
-		Limit(b.PageSize).
-		Find(&tokens).
-		Offset(-1).
-		Count(&count).
-		Error
-	if err != nil {
-		return nil, 0, err
-	}
-	return tokens, count, nil
 }
 
 func ChangePassword(id uint, oldPassword, password string) error {
@@ -109,15 +74,6 @@ func ChangePassword(id uint, oldPassword, password string) error {
 	}
 	user.Password = string(rawPassword)
 	err = database.Instance.Save(&user).Error
-	if err != nil {
-		return err
-	}
-	// clear all user's tokens
-	err = database.Instance.Model(&database.AccessToken{}).Where("user_id = ?", id).Delete(&database.AccessToken{}).Error
-	if err != nil {
-		return err
-	}
-	err = database.Instance.Model(&database.RefreshToken{}).Where("user_id = ?", id).Delete(&database.AccessToken{}).Error
 	if err != nil {
 		return err
 	}
