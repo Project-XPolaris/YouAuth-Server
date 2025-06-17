@@ -4,3 +4,8 @@ data/
 local_*_test.go
 .idea/
 local_*_config.yml
+
+dist/
+main
+.vscode
+.DS_Store

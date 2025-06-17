@@ -2,13 +2,14 @@ package service
 
 import (
 	"errors"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/projectxpolaris/youauth/config"
 	"github.com/projectxpolaris/youauth/database"
 	"github.com/rs/xid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"time"
 )
 
 var (

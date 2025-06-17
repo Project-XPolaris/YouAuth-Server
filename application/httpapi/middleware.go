@@ -50,7 +50,7 @@ func (m *AuthMiddleware) OnRequest(ctx *haruka.Context) {
 		AbortError(ctx, err, http.StatusForbidden)
 		return
 	}
-	user, err := service.GetUserById(token.Id)
+	user, err := service.GetUserByUsername(token.Id)
 	if err != nil {
 		ctx.Abort()
 		AbortError(ctx, err, http.StatusForbidden)

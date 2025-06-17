@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  youauth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: youauth-server
+    ports:
+      - "8602:8602"
+    volumes:
+      - youauth_data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      - YOUAUTH_ADDR=:8602
+      - YOUAUTH_APPLICATION=You Auth Service
+      - YOUAUTH_INSTANCE=main
+      - YOUAUTH_DATASOURCE_POSTGRES_TYPE=postgres
+      - YOUAUTH_DATASOURCE_POSTGRES_HOST=postgres
+      - YOUAUTH_DATASOURCE_POSTGRES_PORT=5432
+      - YOUAUTH_DATASOURCE_POSTGRES_USERNAME=youauth
+      - YOUAUTH_DATASOURCE_POSTGRES_PASSWORD=youauth123
+      - YOUAUTH_DATASOURCE_POSTGRES_DATABASE=youauth
+      - YOUAUTH_SERVICE_NAME=yas
+      - YOUAUTH_SERVICE_DISPLAY=YouAuth service
+      - YOUAUTH_LOG_YOULOG_APPLICATION=YouAuth
+      - YOUAUTH_LOG_YOULOG_INSTANCE=main
+      - YOUAUTH_LOG_YOULOG_ENGINE_LOCAL_TYPE=logrus
+      - YOUAUTH_TOKEN_AUTHCODEEXPIRESIN=300
+      - YOUAUTH_TOKEN_REFRESHTOKENEXPIRESIN=2592000
+      - YOUAUTH_TOKEN_ACCESSTOKENEXPIRESIN=2592000
+      - YOUAUTH_TOKEN_APPTOKENEXPIRESIN=864000000
+      - YOUAUTH_TOKEN_ISSUER=youauth
+      - YOUAUTH_TOKEN_SECRET=aaabbbcccddd
+      - YOUAUTH_TOKEN_URL=http://localhost:8602
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8602/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: youauth-postgres
+    environment:
+      - POSTGRES_USER=youauth
+      - POSTGRES_PASSWORD=youauth123
+      - POSTGRES_DB=youauth
+      - TZ=Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U youauth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  youauth_data:
+    name: youauth_data
+  postgres_data:
+    name: youauth_postgres_data 

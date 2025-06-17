@@ -51,6 +51,14 @@ func GetUserById(id string) (*database.User, error) {
 	return user, nil
 }
 
+func GetUserByUsername(username string) (*database.User, error) {
+	user := &database.User{}
+	err := database.Instance.Where("username = ?", username).First(user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
 func DeleteUser(id string) error {
 	return database.Instance.Unscoped().Model(&database.User{}).Where("id = ?", id).Delete(&database.User{}).Error
 }
