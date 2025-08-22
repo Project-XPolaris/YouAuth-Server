@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/allentom/harukap"
 	"github.com/allentom/harukap/cli"
+	"github.com/allentom/harukap/plugins/nacos"
 	httpapi "github.com/projectxpolaris/youauth/application/httpapi"
 	"github.com/projectxpolaris/youauth/config"
 	"github.com/projectxpolaris/youauth/database"
@@ -22,6 +23,17 @@ func main() {
 	appEngine := harukap.NewHarukaAppEngine()
 	appEngine.ConfigProvider = config.DefaultConfigProvider
 	appEngine.LoggerPlugin = youlog.DefaultYouLogPlugin
+
+	// 初始化并挂载 Nacos 插件（可选）
+	defaultServiceName := config.DefaultConfigProvider.Manager.GetString("service.name")
+	if defaultServiceName == "" {
+		defaultServiceName = "youauth"
+	}
+	if nacosPlugin, err := nacos.NewNacosPluginFromYAML(config.DefaultConfigProvider, defaultServiceName, 8602); err != nil {
+		logrus.Warnf("init nacos plugin failed: %v", err)
+	} else {
+		appEngine.UsePlugin(nacosPlugin)
+	}
 	appEngine.UsePlugin(database.DefaultPlugin)
 	appEngine.HttpService = httpapi.GetEngine()
 	if err != nil {
