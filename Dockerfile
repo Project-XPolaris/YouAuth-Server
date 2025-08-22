@@ -1,11 +1,12 @@
-ARG GOLANG_VERSION=1.23.8
-FROM golang:${GOLANG_VERSION}-bullseye as builder
+ARG GOLANG_VERSION=1.24.4
+FROM golang:${GOLANG_VERSION}-bookworm as builder
 
 # 设置工作目录
 WORKDIR /app
 
 # 设置 GOPROXY 以加速依赖下载
 ARG GOPROXY=https://goproxy.cn
+ENV GOPROXY=${GOPROXY}
 
 # 首先复制依赖文件
 COPY go.mod go.sum ./
@@ -18,7 +19,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o youauth ./main.go
 
 # 使用更小的基础镜像
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # 安装必要的 CA 证书和 curl（用于健康检查）
 RUN apt-get update && \
